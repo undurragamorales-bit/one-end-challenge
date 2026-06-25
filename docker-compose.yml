@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    container_name: one-end-challenge
+
+    volumes:
+      - .:/app
+
+    command: python src/main.py
