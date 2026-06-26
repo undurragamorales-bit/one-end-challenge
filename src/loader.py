@@ -4,12 +4,14 @@ from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-DOCS_DIR = Path("docs")     #se define la carpeta en donde se ubican los PDF
-CHUNK_SIZE = 300            #se declara el tamaño de chunk
-CHUNK_OVERLAP = 30          #se declara el traslapo del chunk
+BASE_DIR = Path(__file__).resolve().parent.parent # se define la carpeta en donde se ubican los PDF, esta función busca dentro de las carpetas hasta encontrar el directorio docs
+DOCS_DIR = BASE_DIR / "docs"     
+CHUNK_SIZE = 300            # se declara el tamano de chunk
+CHUNK_OVERLAP = 30          # se declara el traslapo del chunk
 
-
-##### se cargan los archivos ######
+#---------------------------------------
+#       Carga de documentos PDF 
+#---------------------------------------
 
 def load_pdfs(docs_dir: str | Path = DOCS_DIR):
     docs = []
@@ -25,18 +27,33 @@ def load_pdfs(docs_dir: str | Path = DOCS_DIR):
 
     return docs
 
-##### se dividen los documentos en chunks ######
-if __name__ == "__main__":
-    docs = load_pdfs()
 
-    
+#---------------------------------------
+#       División en chunks
+#---------------------------------------
+
+
+def split_docs(docs):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
     )
 
-    docs_splits = splitter.split_documents(docs)
+    return splitter.split_documents(docs)
 
-    for chunk in docs_splits:
-        print(chunk)
-        print("-----------------")
+
+#---------------------------------------
+#       Carga completa (PDF + chunks)
+#---------------------------------------
+
+def load_chunks():
+    docs = load_pdfs()
+    chunks = split_docs(docs)
+    return chunks
+
+
+
+
+if __name__ == "__main__":
+    chunks = load_chunks()
+    print(f"Chunks creados: {len(chunks)}")
