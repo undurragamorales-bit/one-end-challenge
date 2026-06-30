@@ -413,6 +413,25 @@
             border-color: var(--terminal-border);
         }
 
+        .logout-button {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 20;
+            min-height: 42px;
+            border-radius: 4px;
+            background-color: var(--phosphor-amber-dark);
+            color: var(--phosphor-amber);
+            border-color: var(--phosphor-amber-dim);
+            box-shadow: 0 0 8px rgba(255, 176, 0, 0.2);
+        }
+
+        .logout-button:hover:not(:disabled) {
+            background-color: var(--phosphor-amber);
+            color: var(--bg-deep);
+            box-shadow: var(--glow-amber);
+        }
+
         /* METADATOS DE ENTRADA Y ACCIONES ADICIONALES */
         .input-metadata {
             display: flex;
@@ -784,7 +803,7 @@ Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación quí
                     </div>
                     <div class="scada-stat">
                         <span>LLM Backend:</span>
-                        <span class="scada-val">Llama-3-Industrial</span>
+                        <span class="scada-val">COHERE-R-PLUS</span>
                     </div>
                 </div>
             </div>
@@ -821,6 +840,10 @@ Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación quí
             </div>
         </section>
     </main>
+
+    <button class="action-button logout-button" id="logout-button">
+        <i data-lucide="log-out" size="16"></i> SALIR
+    </button>
 
     <!-- MODAL DE CONFIGURACIÓN DE FASTAPI -->
     <div class="modal-overlay" id="config-modal">
@@ -896,6 +919,7 @@ Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación quí
         const operatorLoginButton = document.getElementById('operator-login-button');
         const operatorNameDisplay = document.getElementById('operator-name-display');
         const changeOperatorButton = document.getElementById('change-operator-button');
+        const logoutButton = document.getElementById('logout-button');
         const initialChatContent = chatMessages.innerHTML;
         let operatorName = localStorage.getItem('operatorName') || '';
         let chatSessionId = 0;
@@ -917,6 +941,7 @@ Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación quí
         sendButton.addEventListener('click', sendMessage);
         operatorLoginButton.addEventListener('click', handleOperatorLogin);
         changeOperatorButton.addEventListener('click', changeOperator);
+        logoutButton.addEventListener('click', changeOperator);
         operatorNameInput.addEventListener('keydown', handleOperatorKeydown);
 
         loadOperatorSession();
@@ -1029,6 +1054,10 @@ Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación quí
             ragInspectorEl.innerHTML = '<p style="color: var(--phosphor-green-dim); font-style: italic;">Inicie una conversaciÃ³n para examinar los documentos y chunks extraÃ­dos del almacenamiento vectorial.</p>';
             tokensCountEl.textContent = '0 tkn';
             pingLatencyEl.textContent = '-- ms';
+            ragServiceStatusEl.textContent = 'INICIALIZADO';
+            ragServiceStatusEl.className = 'scada-val';
+            connectionStatusText.textContent = 'ONLINE';
+            statusIndicatorDot.className = 'status-indicator ready';
             lucide.createIcons();
         }
 
