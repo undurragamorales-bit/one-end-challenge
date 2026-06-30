@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Faiss_index/
+faiss_index/*.faiss
+faiss_index/*.pkl
+
+# docker
+laby-v1.0.tar

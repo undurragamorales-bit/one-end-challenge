@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.git
+.vscode/
+.venv/
+faiss_index/*.faiss
+faiss_index/*.pkl
+.env
+.DS_Store
+Thumbs.db
