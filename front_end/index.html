@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA LABS - LABY Term v4.1</title>
+    <!-- Fonts: IBM Plex Mono para excelente legibilidad y aspecto de ingeniería -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Lucide Icons para iconografía industrial limpia -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* CSS RESET & VARIABLES */
+        :root {
+            --bg-deep: #050705;
+            --bg-panel: #0a0f0a;
+            --bg-input: #030503;
+            --phosphor-green: #00ff66;
+            --phosphor-green-dim: #008833;
+            --phosphor-green-dark: #051a0b;
+            --phosphor-amber: #ffb000;
+            --phosphor-amber-dim: #996a00;
+            --phosphor-amber-dark: #1f1500;
+            --terminal-border: #005522;
+            --terminal-border-active: #00aa44;
+            --scanline-color: rgba(0, 255, 102, 0.015);
+            --font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace;
+            --glow: 0 0 8px rgba(0, 255, 102, 0.45);
+            --glow-amber: 0 0 8px rgba(255, 176, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-mono);
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--phosphor-green);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+        }
+
+        /* EFECTOS DE PANTALLA CRT SUTILES */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(var(--scanline-color) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.03));
+            z-index: 9999;
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* Viñeteado clásico de pantalla de fósforo */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.8) 120%);
+            z-index: 9998;
+            pointer-events: none;
+        }
+
+        /* ENCABEZADO INDUSTRIAL COMPACTO */
+        header {
+            background-color: var(--bg-panel);
+            border-bottom: 2px solid var(--terminal-border);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-box {
+            border: 1px solid var(--phosphor-green);
+            padding: 4px 8px;
+            font-weight: 700;
+            background-color: var(--phosphor-green-dark);
+            text-shadow: var(--glow);
+            box-shadow: inset 0 0 5px rgba(0, 255, 102, 0.2);
+            animation: pulse-border 4s infinite alternate;
+        }
+
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--phosphor-green);
+            text-shadow: var(--glow);
+        }
+
+        .header-subtitle {
+            font-size: 0.7rem;
+            color: var(--phosphor-green-dim);
+            text-transform: uppercase;
+        }
+
+        /* PANEL DE ESTADO SCADA */
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .status-label {
+            color: var(--phosphor-green-dim);
+            text-transform: uppercase;
+        }
+
+        .status-value {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-indicator.ready {
+            background-color: var(--phosphor-green);
+            box-shadow: var(--glow);
+            animation: blink 2s infinite;
+        }
+
+        .status-indicator.warning {
+            background-color: var(--phosphor-amber);
+            box-shadow: var(--glow-amber);
+            animation: blink 1s infinite;
+        }
+
+        /* ESTRUCTURA PRINCIPAL DE LA INTERFAZ */
+        main {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            overflow: hidden;
+            background-color: var(--bg-deep);
+            position: relative;
+        }
+
+        /* Lado Izquierdo: Chatbot */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid var(--terminal-border);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Lado Derecho: Monitor de Telemetría e Inspección RAG */
+        .sidebar {
+            background-color: var(--bg-panel);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .sidebar-panel {
+            border: 1px solid var(--terminal-border);
+            background-color: var(--bg-deep);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            background-color: var(--phosphor-green-dark);
+            border-bottom: 1px solid var(--terminal-border);
+            padding: 6px 12px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--phosphor-amber);
+            text-shadow: var(--glow-amber);
+        }
+
+        .sidebar-content {
+            padding: 12px;
+            line-height: 1.4;
+        }
+
+        /* VENTANA PRINCIPAL DE CONVERSACIÓN */
+        .chat-messages {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* Mensajes de Chat */
+        .message-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            animation: fade-in 0.3s ease-out forwards;
+        }
+
+        .message-row.user {
+            align-self: flex-end;
+        }
+
+        .message-row.assistant {
+            align-self: flex-start;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: var(--phosphor-green-dim);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        .message-row.user .message-meta {
+            justify-content: flex-end;
+            color: var(--phosphor-amber-dim);
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 2px;
+            line-height: 1.5;
+            position: relative;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message-row.user .message-bubble {
+            background-color: var(--phosphor-amber-dark);
+            border: 1px solid var(--phosphor-amber-dim);
+            color: var(--phosphor-amber);
+            text-shadow: 0 0 4px rgba(255, 176, 0, 0.3);
+            border-radius: 4px 4px 0 4px;
+        }
+
+        .message-row.assistant .message-bubble {
+            background-color: var(--phosphor-green-dark);
+            border: 1px solid var(--terminal-border);
+            color: var(--phosphor-green);
+            text-shadow: 0 0 4px rgba(0, 255, 102, 0.3);
+            border-radius: 4px 4px 4px 0;
+        }
+
+        /* RECURSOS RAG VINCULADOS A RESPUESTAS */
+        .sources-indicator {
+            margin-top: 8px;
+            padding: 8px;
+            border-top: 1px dashed var(--terminal-border);
+            font-size: 0.75rem;
+            background-color: rgba(0, 255, 102, 0.02);
+        }
+
+        .sources-title {
+            color: var(--phosphor-amber);
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .source-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-deep);
+            border: 1px solid var(--terminal-border);
+            padding: 2px 6px;
+            border-radius: 2px;
+            margin-right: 4px;
+            margin-top: 4px;
+            color: var(--phosphor-green-dim);
+            font-size: 0.7rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .source-tag:hover {
+            color: var(--phosphor-green);
+            border-color: var(--terminal-border-active);
+            box-shadow: var(--glow);
+        }
+
+        /* ÁREA DE ENTRADA DE TEXTO */
+        .chat-input-area {
+            padding: 16px 20px;
+            background-color: var(--bg-panel);
+            border-top: 2px solid var(--terminal-border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            position: relative;
+            background-color: var(--bg-input);
+            border: 1px solid var(--terminal-border);
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--terminal-border-active);
+            box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.15);
+        }
+
+        .prompt-symbol {
+            padding: 14px 0 14px 16px;
+            color: var(--phosphor-green);
+            font-weight: bold;
+            font-size: 1.1rem;
+            user-select: none;
+        }
+
+        textarea {
+            flex-grow: 1;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            color: var(--phosphor-green);
+            font-size: 0.95rem;
+            padding: 14px;
+            resize: none;
+            height: 52px;
+            max-height: 150px;
+            line-height: 1.4;
+            caret-color: var(--phosphor-green);
+        }
+
+        textarea::placeholder {
+            color: var(--phosphor-green-dim);
+            opacity: 0.5;
+        }
+
+        /* BOTONES DE LA TERMINAL */
+        .action-button {
+            background-color: var(--phosphor-green-dark);
+            color: var(--phosphor-green);
+            border: 1px solid var(--terminal-border);
+            padding: 0 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .action-button:hover:not(:disabled) {
+            background-color: var(--phosphor-green);
+            color: var(--bg-deep);
+            box-shadow: var(--glow);
+        }
+
+        .action-button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .action-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: var(--terminal-border);
+        }
+
+        /* METADATOS DE ENTRADA Y ACCIONES ADICIONALES */
+        .input-metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--phosphor-green-dim);
+            padding: 0 4px;
+        }
+
+        .meta-group {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .meta-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .meta-toggle:hover {
+            color: var(--phosphor-green);
+        }
+
+        .meta-toggle input[type="checkbox"] {
+            accent-color: var(--phosphor-green);
+            cursor: pointer;
+        }
+
+        /* INDICADOR DE ESCRITURA CON CURSOR PARPADEANTE */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background-color: var(--phosphor-green-dark);
+            border: 1px dashed var(--terminal-border);
+            border-radius: 4px;
+            align-self: flex-start;
+            max-width: 400px;
+            margin-bottom: 8px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+            animation: pulse-bg 2s infinite alternate;
+        }
+
+        .terminal-loader {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--phosphor-green-dim);
+            border-top-color: var(--phosphor-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: var(--phosphor-green);
+            vertical-align: middle;
+            animation: blink 0.8s infinite;
+        }
+
+        /* TELEMETRÍA Y MONITOR DE DATOS */
+        .scada-stat {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 85, 34, 0.4);
+            padding: 6px 0;
+        }
+
+        .scada-stat:last-child {
+            border-bottom: none;
+        }
+
+        .scada-val {
+            font-weight: bold;
+        }
+
+        .alert-amber {
+            color: var(--phosphor-amber);
+            text-shadow: var(--glow-amber);
+        }
+
+        /* CONEXIÓN CON FASTAPI (Caja de Configuración de API) */
+        .api-config-trigger {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--phosphor-green-dim);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            outline: none;
+        }
+
+        .api-config-trigger:hover {
+            color: var(--phosphor-green);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background-color: var(--bg-panel);
+            border: 2px solid var(--terminal-border);
+            width: 480px;
+            max-width: 90%;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.1);
+            animation: scale-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-header {
+            background-color: var(--phosphor-green-dark);
+            border-bottom: 2px solid var(--terminal-border);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            color: var(--phosphor-amber);
+            font-weight: bold;
+            text-shadow: var(--glow-amber);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--phosphor-green-dim);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--phosphor-green);
+        }
+
+        .modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--phosphor-green-dim);
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            background-color: var(--bg-deep);
+            border: 1px solid var(--terminal-border);
+            color: var(--phosphor-green);
+            padding: 10px;
+            border-radius: 3px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--terminal-border-active);
+            box-shadow: var(--glow);
+        }
+
+        /* PERSONALIZACIÓN DE SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+            border-left: 1px solid var(--terminal-border);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--terminal-border);
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--terminal-border-active);
+        }
+
+        /* ANIMACIONES */
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse-bg {
+            0% { background-color: var(--phosphor-green-dark); }
+            100% { background-color: rgba(0, 85, 34, 0.35); }
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: var(--phosphor-green-dim); }
+            100% { border-color: var(--phosphor-green); }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scale-up {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none; /* Ocultar sidebar en móviles por espacio, se prioriza el chat */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ENCABEZADO INDUSTRIAL -->
+    <header>
+        <div class="header-brand">
+            <div class="logo-box">IA_LABS</div>
+            <div class="header-title-container">
+                <div class="header-title">SISTEMA CONTROL RAG v4.1</div>
+                <div class="header-subtitle">Laboratorio Químico Industrial</div>
+            </div>
+        </div>
+
+        <div class="system-status">
+            <div class="status-item">
+                <span class="status-label">Terminal:</span>
+                <span class="status-value alert-amber">LABY-ASSISTANT</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Operador:</span>
+                <span class="status-value alert-amber" id="operator-name-display">OPERADOR</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Estado:</span>
+                <span class="status-value" id="connection-status-container">
+                    <span class="status-indicator ready" id="status-indicator-dot"></span>
+                    <span id="connection-status-text">ONLINE</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL -->
+    <main>
+        
+        <!-- SECCIÓN IZQUIERDA: CHATBOT -->
+        <section class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Mensaje de bienvenida inicial -->
+                <div class="message-row assistant">
+                    <div class="message-meta">
+                        <i data-lucide="cpu" size="14"></i> LABY-CORE | TERMINAL_STDOUT | <span class="timestamp-placeholder">SYS_INIT</span>
+                    </div>
+                    <div class="message-bubble" id="welcome-message">Conexión establecida con éxito con el centro de datos IA LABS.
+Hola. Soy LABY, tu asistente de Inteligencia Artificial para documentación química, hojas de seguridad de reactivos, y protocolos de operación industrial.
+
+¿Qué manual o registro operacional deseas consultar hoy?</div>
+                </div>
+            </div>
+
+            <!-- Indicador "Escribiendo..." -->
+            <div class="chat-input-area">
+                <div class="typing-indicator" id="typing-indicator">
+                    <div class="terminal-loader"></div>
+                    <div>LABY RAG procesando consulta y extrayendo fragmentos<span class="cursor-blink"></span></div>
+                </div>
+
+                <!-- Entrada de texto -->
+                <div class="input-wrapper">
+                    <span class="prompt-symbol">LABY&gt;</span>
+                    <textarea id="prompt-input" placeholder="Ingrese consulta de operaciones o normativas..." autofocus></textarea>
+                    <button class="action-button" id="send-button">
+                        <i data-lucide="send" size="16"></i> ENVIAR
+                    </button>
+                </div>
+
+                <!-- Metadatos inferiores de la barra de entrada -->
+                <div class="input-metadata">
+                    <div class="meta-group">
+                        <button class="api-config-trigger" onclick="toggleApiModal()">
+                            <i data-lucide="settings" size="14"></i> Configurar Servidor FastAPI
+                        </button>
+                        <button class="api-config-trigger" id="change-operator-button">
+                            <i data-lucide="user-cog" size="14"></i> Cambiar operador
+                        </button>
+                    </div>
+                    <div class="meta-group">
+                        <label class="meta-toggle">
+                            <input type="checkbox" id="stream-toggle" checked> Stream Texto
+                        </label>
+                        <span id="char-counter">0/500 chs</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DERECHA: TELEMETRÍA Y SISTEMA RAG -->
+        <section class="sidebar">
+            <div class="sidebar-panel">
+                <div class="sidebar-header">
+                    <span>ESTADO DEL NÚCLEO</span>
+                    <i data-lucide="activity" size="14"></i>
+                </div>
+                <div class="sidebar-content">
+                    <div class="scada-stat">
+                        <span>Servicio RAG:</span>
+                        <span class="scada-val" id="rag-service-status">INICIALIZADO</span>
+                    </div>
+                    <div class="scada-stat">
+                        <span>Base Vectorial:</span>
+                        <span class="scada-val">FAISS / PGVector</span>
+                    </div>
+                    <div class="scada-stat">
+                        <span>Embeddings:</span>
+                        <span class="scada-val">text-embedding-3</span>
+                    </div>
+                    <div class="scada-stat">
+                        <span>LLM Backend:</span>
+                        <span class="scada-val">Llama-3-Industrial</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-panel">
+                <div class="sidebar-header">
+                    <span class="alert-amber">INSPECTOR RAG (ÚLTIMA RESPUESTA)</span>
+                    <i data-lucide="database" size="14"></i>
+                </div>
+                <div class="sidebar-content" style="font-size: 0.8rem;" id="rag-inspector">
+                    <p style="color: var(--phosphor-green-dim); font-style: italic;">Inicie una conversación para examinar los documentos y chunks extraídos del almacenamiento vectorial.</p>
+                </div>
+            </div>
+
+            <div class="sidebar-panel">
+                <div class="sidebar-header">
+                    <span>TELEMETRÍA DE RED</span>
+                    <i data-lucide="gauge" size="14"></i>
+                </div>
+                <div class="sidebar-content">
+                    <div class="scada-stat">
+                        <span>IP de Origen:</span>
+                        <span class="scada-val" id="client-ip">127.0.0.1</span>
+                    </div>
+                    <div class="scada-stat">
+                        <span>Latencia API:</span>
+                        <span class="scada-val alert-amber" id="ping-latency">-- ms</span>
+                    </div>
+                    <div class="scada-stat">
+                        <span>Tokens extraídos:</span>
+                        <span class="scada-val" id="tokens-count">0 tkn</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL DE CONFIGURACIÓN DE FASTAPI -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="sliders" size="18"></i> CONFIGURACIÓN FRONTEND-BACKEND
+                </div>
+                <button class="modal-close" onclick="toggleApiModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.8rem; color: var(--phosphor-green-dim); margin-bottom: 8px;">
+                    Configure la ruta de su API de FastAPI en Python. De forma predeterminada, la interfaz se comunicará con el puerto 8001.
+                </p>
+                <div class="form-group">
+                    <label for="api-url">Endpoint del Servidor FastAPI</label>
+                    <input type="text" id="api-url" class="form-control" placeholder="http://127.0.0.1:8001/chat" value="http://127.0.0.1:8001/chat">
+                </div>
+                <button class="action-button" style="width: 100%; padding: 12px 0; border-radius: 4px; margin-top: 10px;" onclick="saveApiConfig()">
+                    APLICAR PARÁMETROS
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE IDENTIFICACION DEL OPERADOR -->
+    <div class="modal-overlay" id="operator-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="user-check" size="18"></i> IDENTIFICACION DE OPERADOR
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="operator-name-input">Nombre del operador</label>
+                    <input type="text" id="operator-name-input" class="form-control" autocomplete="name">
+                </div>
+                <button class="action-button" id="operator-login-button" style="width: 100%; padding: 12px 0; border-radius: 4px; margin-top: 10px;">
+                    INICIAR SESION
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE CONTROL DE TERMINAL (INTEGRACIÓN PURA CON FASTAPI) -->
+    <script>
+        // Inicializar Iconos de Lucide
+        lucide.createIcons();
+
+        // Configuración de la API direccionada por defecto a tu puerto local
+        let config = {
+            apiUrl: 'http://127.0.0.1:8001/chat'
+        };
+
+        // Elementos del DOM
+        const chatMessages = document.getElementById('chat-messages');
+        const promptInput = document.getElementById('prompt-input');
+        const sendButton = document.getElementById('send-button');
+        const charCounter = document.getElementById('char-counter');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const streamToggle = document.getElementById('stream-toggle');
+        const configModal = document.getElementById('config-modal');
+        const clientIpEl = document.getElementById('client-ip');
+        const pingLatencyEl = document.getElementById('ping-latency');
+        const tokensCountEl = document.getElementById('tokens-count');
+        const ragServiceStatusEl = document.getElementById('rag-service-status');
+        const ragInspectorEl = document.getElementById('rag-inspector');
+        const connectionStatusText = document.getElementById('connection-status-text');
+        const statusIndicatorDot = document.getElementById('status-indicator-dot');
+        const operatorModal = document.getElementById('operator-modal');
+        const operatorNameInput = document.getElementById('operator-name-input');
+        const operatorLoginButton = document.getElementById('operator-login-button');
+        const operatorNameDisplay = document.getElementById('operator-name-display');
+        const changeOperatorButton = document.getElementById('change-operator-button');
+        const initialChatContent = chatMessages.innerHTML;
+        let operatorName = localStorage.getItem('operatorName') || '';
+        let chatSessionId = 0;
+
+        // Asignación de Timestamps Reales en la UI
+        document.querySelectorAll('.timestamp-placeholder').forEach(el => {
+            el.textContent = getSystemTime();
+        });
+
+        // Intentar rescatar la dirección IP pública real únicamente para fines cosméticos de telemetría
+        fetch('https://api.ipify.org?format=json')
+            .then(res => res.json())
+            .then(data => { clientIpEl.textContent = data.ip; })
+            .catch(() => { clientIpEl.textContent = '127.0.0.1'; });
+
+        // Escucha de Eventos de Entrada de Texto
+        promptInput.addEventListener('input', handleInput);
+        promptInput.addEventListener('keydown', handleKeydown);
+        sendButton.addEventListener('click', sendMessage);
+        operatorLoginButton.addEventListener('click', handleOperatorLogin);
+        changeOperatorButton.addEventListener('click', changeOperator);
+        operatorNameInput.addEventListener('keydown', handleOperatorKeydown);
+
+        loadOperatorSession();
+
+        // Ajustar altura de la caja de texto dinámicamente
+        function handleInput() {
+            charCounter.textContent = `${promptInput.value.length}/500 chs`;
+            promptInput.style.height = 'auto';
+            promptInput.style.height = promptInput.scrollHeight + 'px';
+        }
+
+        // Envío directo al presionar Enter (sin Shift)
+        function handleKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleOperatorKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleOperatorLogin();
+            }
+        }
+
+        // Obtener la hora militar en tiempo real
+        function getSystemTime() {
+            const now = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}Z-STABLE`;
+        }
+
+        // Gestión de Ventana de Configuración de Backend
+        function toggleApiModal() {
+            configModal.classList.toggle('open');
+        }
+
+        function saveApiConfig() {
+            const urlInput = document.getElementById('api-url').value.trim();
+            if (urlInput) {
+                config.apiUrl = urlInput;
+                addTerminalLog(`Servidor de destino reconfigurado a: ${config.apiUrl}`);
+            }
+            toggleApiModal();
+        }
+
+        function loadOperatorSession() {
+            if (operatorName) {
+                setOperator(operatorName);
+                closeOperatorModal();
+                return;
+            }
+
+            setOperator('');
+            showOperatorModal();
+        }
+
+        function handleOperatorLogin() {
+            const name = operatorNameInput.value.trim();
+            if (!name) {
+                operatorNameInput.focus();
+                return;
+            }
+
+            localStorage.setItem('operatorName', name);
+            setOperator(name);
+            closeOperatorModal();
+        }
+
+        function setOperator(name) {
+            operatorName = name;
+            operatorNameDisplay.textContent = name || 'OPERADOR';
+            promptInput.disabled = !name;
+            sendButton.disabled = !name;
+            if (name) {
+                promptInput.focus();
+            }
+        }
+
+        function showOperatorModal() {
+            operatorNameInput.value = '';
+            operatorModal.classList.add('open');
+            promptInput.disabled = true;
+            sendButton.disabled = true;
+            operatorNameInput.focus();
+        }
+
+        function closeOperatorModal() {
+            operatorModal.classList.remove('open');
+        }
+
+        function changeOperator() {
+            localStorage.removeItem('operatorName');
+            chatSessionId++;
+            setOperator('');
+            resetConversation();
+            showOperatorModal();
+        }
+
+        function resetConversation() {
+            chatMessages.innerHTML = initialChatContent;
+            typingIndicator.classList.remove('active');
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            charCounter.textContent = '0/500 chs';
+            document.querySelectorAll('.timestamp-placeholder').forEach(el => {
+                el.textContent = getSystemTime();
+            });
+            ragInspectorEl.innerHTML = '<p style="color: var(--phosphor-green-dim); font-style: italic;">Inicie una conversaciÃ³n para examinar los documentos y chunks extraÃ­dos del almacenamiento vectorial.</p>';
+            tokensCountEl.textContent = '0 tkn';
+            pingLatencyEl.textContent = '-- ms';
+            lucide.createIcons();
+        }
+
+        // Escritura de Logs Técnicos en Pantalla
+        function addTerminalLog(message) {
+            const logRow = document.createElement('div');
+            logRow.style.fontSize = '0.75rem';
+            logRow.style.color = 'var(--phosphor-green-dim)';
+            logRow.style.borderLeft = '2px solid var(--terminal-border)';
+            logRow.style.paddingLeft = '8px';
+            logRow.style.margin = '4px 0';
+            logRow.innerHTML = `[SYS_MONITOR] - ${getSystemTime()} - ${message}`;
+            chatMessages.appendChild(logRow);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Auxiliar para mitigar ataques XSS al renderizar texto dinámico en el HTML de la terminal
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // Añadir elemento de mensaje al flujo de la conversación
+        function appendMessage(sender, text) {
+            const row = document.createElement('div');
+            row.className = `message-row ${sender}`;
+            
+            const timestamp = getSystemTime();
+            const icon = sender === 'user' ? 'user' : 'cpu';
+            const systemLabel = sender === 'user' ? `${escapeHTML(operatorName || 'OPERADOR')}-SEC` : 'LABY-CORE';
+            const metaStyle = sender === 'user' ? 'color: var(--phosphor-amber-dim); justify-content: flex-end;' : '';
+
+            row.innerHTML = `
+                <div class="message-meta" style="${metaStyle}">
+                    <i data-lucide="${icon}" size="14"></i> ${systemLabel} | ${timestamp}
+                </div>
+                <div class="message-bubble">${escapeHTML(text)}</div>
+            `;
+            
+            chatMessages.appendChild(row);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            lucide.createIcons();
+        }
+
+        // Función Principal: Comunicación real con FastAPI mediante Fetch
+        async function sendMessage() {
+            const text = promptInput.value.trim();
+            if (!text || !operatorName) {
+                if (!operatorName) showOperatorModal();
+                return;
+            }
+
+            // Bloquear interfaz para evitar solapamientos durante la consulta
+            promptInput.value = '';
+            promptInput.disabled = true;
+            sendButton.disabled = true;
+            promptInput.style.height = 'auto';
+            charCounter.textContent = '0/500 chs';
+
+            // 1. Mostrar inmediatamente el mensaje del operador en pantalla
+            appendMessage('user', text);
+
+            // Activar indicador visual de carga RAG
+            typingIndicator.classList.add('active');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const startTime = performance.now();
+            const activeSessionId = chatSessionId;
+
+            try {
+                // 2. Enviar la pregunta mediante fetch() al endpoint
+                const response = await fetch(config.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: operatorName,
+                        question: text
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error Status: ${response.status}`);
+                }
+
+                // 3. Esperar la respuesta estructurada de FastAPI
+                const data = await response.json();
+                if (activeSessionId !== chatSessionId) return;
+
+                const stopTime = performance.now();
+                
+                // Extraer el texto del JSON obtenido {"answer": "..."}
+                const systemAnswer = data.answer || "Respuesta sin contenido estructurado.";
+
+                // Medición técnica de latencia y volumen
+                const latency = Math.round(stopTime - startTime);
+                pingLatencyEl.textContent = `${latency} ms`;
+                tokensCountEl.textContent = `${Math.round(systemAnswer.length / 4)} tkn`;
+
+                // Quitar indicador de procesamiento
+                typingIndicator.classList.remove('active');
+
+                // Actualizar estado de red lateral
+                ragServiceStatusEl.textContent = 'CONECTADO';
+                ragServiceStatusEl.className = 'scada-val';
+                connectionStatusText.textContent = 'ONLINE';
+                statusIndicatorDot.className = 'status-indicator ready';
+
+                // Mostrar en el Inspector RAG la telemetría del request real enviado y recibido
+                ragInspectorEl.innerHTML = `
+                    <p style="color: var(--phosphor-amber); font-weight:bold; margin-bottom: 4px;">Payload Enviado (JSON):</p>
+                    <pre style="background: var(--bg-deep); padding: 6px; border: 1px solid var(--terminal-border); font-size: 0.7rem; color: var(--phosphor-green-dim); overflow-x: auto; margin-bottom: 12px; border-radius: 2px;">{\n  "name": "${escapeHTML(operatorName)}",\n  "question": "${escapeHTML(text)}"\n}</pre>
+                    
+                    <p style="color: var(--phosphor-amber); font-weight:bold; margin-bottom: 4px;">Payload Recibido (JSON):</p>
+                    <pre style="background: var(--bg-deep); padding: 6px; border: 1px solid var(--terminal-border); font-size: 0.7rem; color: var(--phosphor-green-dim); overflow-x: auto; border-radius: 2px;">{\n  "answer": "${escapeHTML(systemAnswer.substring(0, 150))}${systemAnswer.length > 150 ? '...' : ''}"\n}</pre>
+                `;
+
+                // 4. Mostrar la respuesta del chatbot (usando Stream o directo)
+                if (streamToggle.checked) {
+                    streamMessageEffect('assistant', systemAnswer);
+                } else {
+                    appendMessage('assistant', systemAnswer);
+                    unlockInput();
+                }
+
+            } catch (err) {
+                if (activeSessionId !== chatSessionId) return;
+
+                // Capturar errores de red, puertos cerrados, o fallos de CORS
+                typingIndicator.classList.remove('active');
+                
+                pingLatencyEl.textContent = 'ERROR';
+                ragServiceStatusEl.textContent = 'OFFLINE';
+                ragServiceStatusEl.className = 'scada-val alert-amber';
+                connectionStatusText.textContent = 'ERR_CONN';
+                statusIndicatorDot.className = 'status-indicator warning';
+
+                addTerminalLog(`Error de enlace de red: ${err.message}`);
+
+                // 5. Si ocurre un error de conexión, mostrar exactamente: "No fue posible conectar con Laby."
+                const errorMessage = "No fue posible conectar con Laby.";
+                
+                if (streamToggle.checked) {
+                    streamMessageEffect('assistant', errorMessage);
+                } else {
+                    appendMessage('assistant', errorMessage);
+                    unlockInput();
+                }
+            }
+        }
+
+        // Reactivar controles de entrada de texto
+        function unlockInput() {
+            promptInput.disabled = !operatorName;
+            sendButton.disabled = !operatorName;
+            if (operatorName) {
+                promptInput.focus();
+            }
+        }
+
+        // Animación de flujo de caracteres simulada de terminal de fósforo verde
+        function streamMessageEffect(sender, fullText) {
+            const row = document.createElement('div');
+            row.className = `message-row ${sender}`;
+            const timestamp = getSystemTime();
+            
+            row.innerHTML = `
+                <div class="message-meta">
+                    <i data-lucide="cpu" size="14"></i> LABY-CORE | STREAM_STDOUT | ${timestamp}
+                </div>
+                <div class="message-bubble"></div>
+            `;
+            
+            chatMessages.appendChild(row);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            lucide.createIcons();
+
+            const bubble = row.querySelector('.message-bubble');
+            let index = 0;
+            
+            const interval = setInterval(() => {
+                if (index < fullText.length) {
+                    bubble.textContent += fullText[index];
+                    index++;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } else {
+                    clearInterval(interval);
+                    unlockInput();
+                }
+            }, 12); // Velocidad estándar de volcado de texto industrial
+        }
+    </script>
+</body>
+</html>
